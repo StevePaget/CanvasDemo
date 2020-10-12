@@ -1,38 +1,45 @@
 from tkinter import *
 import tkinter.font as tkFont
-import tkinter.scrolledtext as scrolledtext
 import random
 
 
 class Jeff():
-    def __init__(self):
-        self.x = 0
-        self.y = 0
+    def __init__(self,x,y,imagename, canvas,name):
+        self.x = x
+        self.y = y
         self.xspeed = 2
         self.yspeed = 5
-        self.image = PhotoImage(file="jeff.png")
-        self.canvasID = None
+        self.name = name
+        self.image = PhotoImage(file=imagename)
+        # When we draw this image onto the canvas, it is assigned an ID number. We need to remember this
+        # so that we can move the image later. We will store it within our Jeff object
+        self.canvasID = canvas.create_image(self.x,self.y,image=self.image)
 
+    def drag(self,canvas,x,y):
+        self.x = x
+        self.y = y
+        canvas.coords(self.canvasID, self.x, self.y)
         
-    def move(self, canvas):
+        
+    def animate(self, canvas):
         self.x += self. xspeed
         self.y += self.yspeed
 
-        if self.x > int(canvas.cget("width")) - self.image.width():
-            self.x = int(canvas.cget("width")) - self.image.width()
+        if self.x > int(canvas.cget("width")) - self.image.width()//2:
+            self.x = int(canvas.cget("width")) - self.image.width()//2
             self.xspeed *= -1
-        if self.x <0:
-            self.x = 0
+        if self.x <self.image.width()//2:
+            self.x = self.image.width()//2
             self.xspeed *= -1
 
-        if self.y > int(canvas.cget("height")) - self.image.height():
-            self.y = int(canvas.cget("height")) - self.image.height()
+        if self.y > int(canvas.cget("height")) - self.image.height()//2:
+            self.y = int(canvas.cget("height")) - self.image.height()//2
             self.yspeed *= -1
-        if self.y <0:
-            self.y=0
+        if self.y <self.image.height()//2:
+            self.y=self.image.height()//2
             self.yspeed *= -1
-        
         canvas.coords(self.canvasID, self.x, self.y)
+        
         
 
 
@@ -53,9 +60,17 @@ class App(Tk):
         self.b2.grid(row=2, column=1, sticky="EW")
         self.b3 = Button(self, text= "Animate", font=self.buttonfont, command= self.animate)
         self.b3.grid(row=3, column=1, sticky="EW")
+        self.b4 = Button(self, text= "Draggable", font=self.buttonfont, command= self.startDragging)
+        self.b4.grid(row=4, column=1, sticky="EW")
+        self.theCanvas.bind("<B1-Motion>",self.drag)
+        self.theCanvas.bind("<ButtonRelease-1>",self.dropped)
         
-        self.rowconfigure(4,weight=1)
+
+
+        self.rowconfigure(5,weight=1)
         self.animating = False
+        self.dragging = False
+        self.myafterID=None
     
     def destroy(self):
         # All tkinter Widgets have a destroy() method which is used when you close the window
@@ -63,13 +78,18 @@ class App(Tk):
         
         # We use 'after_cancel' to clean up the scheduled animation frame before the window closes down
         # Otherwise you get an error
-        self.theCanvas.after_cancel(self.myafterID)
+        if self.myafterID:
+            self.theCanvas.after_cancel(self.myafterID)
         # Now we can tell tkinter to finish off the rest of the normal Destroy command.
         super().destroy()  # super() refers to the parent class of this tkinter Widget. It is an example
                            # of polymorphism. We are altering the existing Destroy command of the parent.
         
         
     def drawShapes(self):
+        if self.dragging:
+            self.startDragging()
+        if self.animating:
+            self.animate()
         # this will clear the canvas and draw a series of shapes and text
         self.theCanvas.delete(ALL)
         # the shape positions are not remembered, so it is not possible to erase or move them
@@ -90,6 +110,10 @@ class App(Tk):
         
         
     def drawImages(self):
+        if self.dragging:
+            self.startDragging()
+        if self.animating:
+            self.animate()
         self.theCanvas.delete(ALL)
         self.jeffpic = PhotoImage(file="jeff.png") # We can use PNGs but they need to be converted into a special format first
         for _ in range(5):
@@ -98,13 +122,12 @@ class App(Tk):
         
     def animate(self):
         if not self.animating:
+            if self.dragging:
+                self.startDragging()
             self.theCanvas.delete(ALL)
             self.b3.configure(text="Stop")
             # Make a Jeff
-            self.theJeff = Jeff()
-            # When we draw this image onto the canvas, it is assigned an ID number. We need to remember this
-            # so that we can move the image later. We will store it within our Jeff object
-            self.theJeff.canvasID = self.theCanvas.create_image(0,0,image=self.theJeff.image, anchor=NW)
+            self.theJeff = Jeff(200,200,"jeff.png",self.theCanvas,0)
             # We will use this boolean to keep track of whether we want our animation to continue, or to stop
             self.animating = True
             # We can't just use a loop here, because that would lock up the whole program
@@ -120,11 +143,45 @@ class App(Tk):
         if self.animating:
             # We call the move function of our Jeff object. This handles the actual moving of the image on the
             # Canvas, so we send it the canvas as a parameter
-            self.theJeff.move(self.theCanvas)
+            self.theJeff.animate(self.theCanvas)
             # And we schedule another update in 20 ms
             self.myafterID = self.theCanvas.after(30, self.animFrame)
         
-
+    def startDragging(self):
+        if not self.dragging:
+            if self.animating:
+                self.animate() # stops the animation if its still running
+            self.theCanvas.delete(ALL)
+            self.dragging = True
+            self.b4.config(text="Stop")
+            
+            self.jeffs = {} # make a dictionary so we can access them by ID
+            for i in range(2):
+                newJeff = Jeff(50+i*300,300,"jeff" + str(i) + ".png",self.theCanvas,"Jeff number " + str(i))
+                self.jeffs[newJeff.canvasID] = newJeff
+        else:
+            self.b4.config(text="Draggable")
+            self.dragging = False
+            self.jeffs= []
+        
+    def drag(self,e):
+        mouseX = e.x
+        mouseY = e.y
+        if self.dragging:
+            # get ID of nearest picture
+            IDNum = self.theCanvas.find_closest(mouseX, mouseY)[0]
+            self.theCanvas.tag_raise(IDNum)
+            self.jeffs[IDNum].drag(self.theCanvas, mouseX,mouseY)
+    
+    def dropped(self,e):
+        mouseX = e.x
+        mouseY = e.y
+        if self.dragging:
+            # get ID of nearest picture
+            IDNum = self.theCanvas.find_closest(mouseX, mouseY)[0]
+            self.theCanvas.tag_raise(IDNum)
+            print(self.jeffs[IDNum].name + " dropped at ",mouseX, mouseY)
+            
 
 if __name__ == "__main__":
     app = App()
