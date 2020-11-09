@@ -62,16 +62,19 @@ class App(Tk):
         self.b3.grid(row=3, column=1, sticky="EW")
         self.b4 = Button(self, text= "Draggable", font=self.buttonfont, command= self.startDragging)
         self.b4.grid(row=4, column=1, sticky="EW")
+        self.b5 = Button(self, text= "Mouse Points", font=self.buttonfont, command= self.startMousePoints)
+        self.b5.grid(row=5, column=1, sticky="EW")
         self.theCanvas.bind("<B1-Motion>",self.drag)
         self.theCanvas.bind("<ButtonRelease-1>",self.dropped)
-        
-
-
-        self.rowconfigure(5,weight=1)
+        self.theCanvas.bind("<Button-1>",self.clicked)    
+        self.rowconfigure(6,weight=1)
         self.animating = False
         self.dragging = False
         self.myafterID=None
-    
+
+    def gotfocus(self,e):
+        self.texttest.delete(0,END)        
+
     def destroy(self):
         # All tkinter Widgets have a destroy() method which is used when you close the window
         # We are going to override it and provide our own version
@@ -86,6 +89,7 @@ class App(Tk):
         
         
     def drawShapes(self):
+        self.points = False
         if self.dragging:
             self.startDragging()
         if self.animating:
@@ -110,6 +114,7 @@ class App(Tk):
         
         
     def drawImages(self):
+        self.points = False
         if self.dragging:
             self.startDragging()
         if self.animating:
@@ -121,6 +126,7 @@ class App(Tk):
             self.theCanvas.create_image(random.randint(0,500),random.randint(0,500),image=self.jeffpic, anchor=NW)
         
     def animate(self):
+        self.points = False
         if not self.animating:
             if self.dragging:
                 self.startDragging()
@@ -148,6 +154,7 @@ class App(Tk):
             self.myafterID = self.theCanvas.after(30, self.animFrame)
         
     def startDragging(self):
+        self.points = False
         if not self.dragging:
             if self.animating:
                 self.animate() # stops the animation if its still running
@@ -182,6 +189,19 @@ class App(Tk):
             self.theCanvas.tag_raise(IDNum)
             print(self.jeffs[IDNum].name + " dropped at ",mouseX, mouseY)
             
+    def startMousePoints(self):
+        self.dragging=False
+        self.animating = False
+        self.points = True
+        self.theCanvas.delete(ALL)
+        self.theCanvas.create_text(300,300,text="Click anywhere to identify positions", fill="#000000")
+    
+    def clicked(self,e):
+        if self.points:
+            self.theCanvas.delete(ALL)
+            self.theCanvas.create_text(300,300,text="Click anywhere to identify positions", fill="#000000")
+            self.theCanvas.create_text(300,400,text="Clicked at " + str(e.x) + ":" + str(e.y), fill="#000000")
+
 
 if __name__ == "__main__":
     app = App()
