@@ -8,6 +8,8 @@ class App(Tk):
         self.titlefont = tkFont.Font(family="Arial", size=20, slant="italic")
         self.buttonfont = tkFont.Font(family="Arial", size=18)
         
+        self.mainloop()
+        
 
 if __name__ == "__main__":
     app = App()

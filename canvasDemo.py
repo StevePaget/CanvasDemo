@@ -71,6 +71,7 @@ class App(Tk):
         self.animating = False
         self.dragging = False
         self.myafterID=None
+        self.mainloop()
 
     def gotfocus(self,e):
         self.texttest.delete(0,END)        
